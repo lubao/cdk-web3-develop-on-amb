@@ -29,6 +29,7 @@ class NftLabStack(Stack):
         )
         
         # Create cloud9 Develope Environment
+        # Cloud9-alpha will create EC2 and not showed on Cloud9 Console.
         # TODO
         # TODO Code commit
         
