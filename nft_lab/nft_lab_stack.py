@@ -29,11 +29,8 @@ class NftLabStack(Stack):
         )
         
         # Create cloud9 Develope Environment
-        #TODO code commit
-        cloud9.Ec2Environment(self, "NFTLab",
-            vpc=_vpc,
-            image_id=cloud9.ImageId.UBUNTU_18_04,
-        )
+        # TODO
+        # TODO Code commit
         
         # Create ECS Cluster for IPFS node
         _ecs_cluster = ecs.Cluster(self, "IpfsEcsCluster", vpc=_vpc)
@@ -71,6 +68,8 @@ class NftLabStack(Stack):
                 stream_prefix='IpfsKuboNode'
             )
         )
+        
+        # TODO create ECS service for ipfs task
         
         # Create BILLING_TOKEN for Amazon Managed Blockchain
         _billing_token = amb.CfnAccessor(self, "billing_token",
