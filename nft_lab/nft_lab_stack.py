@@ -94,6 +94,13 @@ class NftLabStack(Stack):
             f'billingtoken={_billing_token.attr_billing_token}',
             description='Endpoint for Managed Blockchain Goerli Node',
         )
+        cdk.CfnOutput(
+            self, 'GoerliNodeWSEndpoint',
+            value=f'wss://{_goerli_node.attr_node_id}.wss.t.'
+            f'ethereum.managedblockchain.{self.region}.amazonaws.com?'
+            f'billingtoken={_billing_token.attr_billing_token}',
+            description='Endpoint for Managed Blockchain Goerli Node',
+        )
         
         # TODO IPFS Endpoint
 
