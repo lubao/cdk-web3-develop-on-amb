@@ -7,6 +7,7 @@ from aws_cdk import (
     aws_cloud9 as cloud9,
     aws_managedblockchain as amb,
     aws_codecommit as codecommit,
+    aws_elasticloadbalancingv2 as elbv2,
     # aws_sqs as sqs,
 )
 from constructs import Construct
@@ -54,6 +55,8 @@ class NftLabStack(Stack):
         # Create ECS Cluster for IPFS node
         _ecs_cluster = ecs.Cluster(self, "IpfsEcsCluster", vpc=_vpc)
         
+
+
         # Create IPFS kubo Fargate Task
         _ipfs_task = ecs.FargateTaskDefinition(
             self, 'IpfsKuboTask',
@@ -92,9 +95,9 @@ class NftLabStack(Stack):
         
         # Secruity Group for IPFS Fargate Services
         _ipfs_srv_sg = ec2.SecurityGroup(self, 'IpfsServiceSecurityGroup',
-                                         vpc=_vpc,
-                                         description='Allow access to IPFS nodes'
-                                         )
+            vpc=_vpc,
+            description='Allow access to IPFS nodes'
+        )
 
         _ipfs_srv_sg.add_ingress_rule(
             peer=ec2.Peer.any_ipv4(),
@@ -113,6 +116,8 @@ class NftLabStack(Stack):
             connection=ec2.Port.tcp(5001),
             description='IPFS RPC API from internal network only'
         )
+        
+
 
         # Create ECS Fargate Service
         _ipfs_srv = ecs.FargateService(
@@ -130,8 +135,107 @@ class NftLabStack(Stack):
             max_healthy_percent=100,
             min_healthy_percent=0
         )
+        # ALB's Security Group for IPFS 
+        _alb_ipfs_sg = ec2.SecurityGroup(self, 'AlbIpfsSecurityGroup',
+            allow_all_outbound=False,
+            vpc=_vpc,
+            description='Inbound/Outbound rules for the'
+                        ' ALB in front of IPFS REST API'
+        )
+
+        _alb_ipfs_sg.add_egress_rule(
+            peer=ec2.Peer.ipv4(_vpc.vpc_cidr_block),
+            connection=ec2.Port.tcp(5001),
+            description='Allow connection out to the IPFS REST API '
+            ' on port 5001 anywhere in internal network'
+        )
+        
+        _alb_ipfs_sg.add_egress_rule(
+            peer=ec2.Peer.ipv4(_vpc.vpc_cidr_block),
+            connection=ec2.Port.tcp(8080),
+            description='Allow connection out to the IPFS Gateway '
+            ' on port 8080 anywhere in internal network'
+        )
+
+        # ALB for IPFS
+        _alb_ipfs_kubo = elbv2.ApplicationLoadBalancer(
+            self, 'IpfsKuboAlb',
+            vpc=_vpc,
+            internet_facing=True,
+            security_group=_alb_ipfs_sg,
+            # vpc_subnets=
+        )
 
 
+
+        # Target Group for IPFS REST API
+        _alb_ipfs_kubo_restapi_target_group = elbv2.ApplicationTargetGroup(
+            self, "AlbIPFSRestApiTargetGroup",
+            target_type=elbv2.TargetType.IP,
+            port=5001,
+            protocol=elbv2.ApplicationProtocol.HTTP,
+            health_check=elbv2.HealthCheck(
+                enabled=True,
+                path='/api/v0/swarm/peers',
+                healthy_http_codes='200,400,403,404,405',
+            ),
+            vpc=_vpc
+        )
+
+        # Target Group for IPFS Gateway
+        _alb_ipfs_kubo_gateway_target_group = elbv2.ApplicationTargetGroup(
+            self, "AlbIPFSGatewayTargetGroup",
+            target_type=elbv2.TargetType.IP,
+            port=8080,
+            protocol=elbv2.ApplicationProtocol.HTTP,
+            health_check=elbv2.HealthCheck(
+                enabled=True,
+                path='/ipfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn',
+                healthy_http_codes='200,301,302,303,304,307,308',
+            ),
+            vpc=_vpc
+        )
+
+        # Add target to ALB IPFS REST API Listner
+        _alb_ipfs_kubo_restapi_target_group.add_target(
+            _ipfs_srv.load_balancer_target(
+                container_name='IpfsKuboNode',
+                container_port=5001
+            )
+        )
+
+        # Add target to ALB IPFS Gateway Listner
+        _alb_ipfs_kubo_gateway_target_group.add_target(
+            _ipfs_srv.load_balancer_target(
+                container_name='IpfsKuboNode',
+                container_port=8080
+            )
+        )
+        
+        # ALB Listener for IPFS Kubo Gateway (port 8080)
+        _ipfs_kubo_gateway_listener = _alb_ipfs_kubo.add_listener(
+            'IpfsKuboRestApiListener', 
+            port=80,
+            default_target_groups=[_alb_ipfs_kubo_gateway_target_group],
+            protocol=elbv2.ApplicationProtocol.HTTP,
+        )
+        
+       # ALB Listener for IPFS Kubo RESTAPI (port 5001)
+        _ipfs_kubo_gateway_listener = _alb_ipfs_kubo.add_listener(
+            'IpfsKuboGatewayListener', 
+            port=5001,
+            default_target_groups=[_alb_ipfs_kubo_restapi_target_group],
+            protocol=elbv2.ApplicationProtocol.HTTP,
+        )
+        # _ipfs_srv.register_load_balancer_targets(
+        #     container_name="IpfsKuboNode",
+        #     container_port=5001,
+        #     new_target_group_id="ECS",
+        #     listener=ecs.ListenerConfig.application_listener(
+        #         _ipfs_kubo_listener,
+        #         protocol=elbv2.ApplicationProtocol.HTTP
+        #     )
+        # )
         
         # Create BILLING_TOKEN for Amazon Managed Blockchain
         _billing_token = amb.CfnAccessor(self, "billing_token",
@@ -155,6 +259,7 @@ class NftLabStack(Stack):
             f'billingtoken={_billing_token.attr_billing_token}',
             description='Endpoint for Managed Blockchain Goerli Node',
         )
+        
         cdk.CfnOutput(
             self, 'GoerliNodeWSEndpoint',
             value=f'wss://{_goerli_node.attr_node_id}.wss.t.'
@@ -163,5 +268,15 @@ class NftLabStack(Stack):
             description='Endpoint for Managed Blockchain Goerli Node',
         )
         
-        # TODO IPFS Endpoint
+        # IPFS Endpoint
+        cdk.CfnOutput(
+            self, 'IPFS Gateway Endpoint',
+            value=f'http://{_alb_ipfs_kubo.load_balancer_dns_name}',
+            description='Endpoint for IPFS Gateway to get file',
+        )
 
+        cdk.CfnOutput(
+            self, 'IPFS REST API Endpoint',
+            value=f'http://{_alb_ipfs_kubo.load_balancer_dns_name}:5001',
+            description='Endpoint for IPFS REST API for Add/Delete files',
+        )
