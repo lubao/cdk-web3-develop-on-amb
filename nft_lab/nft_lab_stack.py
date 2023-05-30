@@ -1,6 +1,5 @@
 import aws_cdk as cdk
 from aws_cdk import (
-    Duration,
     Stack,
     aws_ec2 as ec2,
     aws_ecs as ecs,
@@ -8,10 +7,8 @@ from aws_cdk import (
     aws_managedblockchain as amb,
     aws_codecommit as codecommit,
     aws_elasticloadbalancingv2 as elbv2,
-    # aws_sqs as sqs,
 )
 from constructs import Construct
-# import os
 
 
 
@@ -20,7 +17,7 @@ class NftLabStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         self._define_parameter()
-        print(self.__dict__)
+        # print(self.__dict__)
         # Create A VPC with 3 public subnet
         _vpc = ec2.Vpc(
             self, "NFTLabs",
@@ -277,6 +274,9 @@ class NftLabStack(Stack):
 
         self._parameter_cloud9_owner = cdk.CfnParameter(
             self, 'Cloud9Owner',
-            allowed_pattern='^arn:(aws|aws-cn|aws-us-gov|aws-iso|aws-iso-b):(iam|sts)::\d+:(root|(user\/[\w+=/:,.@-]{1,64}|federated-user\/[\w+=/:,.@-]{2,32}|assumed-role\/[\w+=:,.@-]{1,64}\/[\w+=,.@-]{1,64}))$'
+            allowed_pattern='^arn:(aws|aws-cn|aws-us-gov|' \
+            'aws-iso|aws-iso-b):(iam|sts)::\d+:(root|' \
+            '(user\/[\w+=/:,.@-]{1,64}|federated-user\/[\w+=/:,.@-]{2,32}|' \
+            'assumed-role\/[\w+=:,.@-]{1,64}\/[\w+=,.@-]{1,64}))$'
         )
     

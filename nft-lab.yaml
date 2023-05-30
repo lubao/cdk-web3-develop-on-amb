@@ -1,0 +1,472 @@
+Resources:
+  NFTLabs1887C6F8:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: NftLabStack/NFTLabs
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/Resource
+  NFTLabspublicSubnet1Subnet5CEE8B20:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: NFTLabs1887C6F8
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: aws-cdk:subnet-name
+          Value: public
+        - Key: aws-cdk:subnet-type
+          Value: Public
+        - Key: Name
+          Value: NftLabStack/NFTLabs/publicSubnet1
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/publicSubnet1/Subnet
+  NFTLabspublicSubnet1RouteTable31FFD5A5:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: NFTLabs1887C6F8
+      Tags:
+        - Key: Name
+          Value: NftLabStack/NFTLabs/publicSubnet1
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/publicSubnet1/RouteTable
+  NFTLabspublicSubnet1RouteTableAssociation1C4B8B0A:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: NFTLabspublicSubnet1RouteTable31FFD5A5
+      SubnetId:
+        Ref: NFTLabspublicSubnet1Subnet5CEE8B20
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/publicSubnet1/RouteTableAssociation
+  NFTLabspublicSubnet1DefaultRoute72C1B7CD:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: NFTLabspublicSubnet1RouteTable31FFD5A5
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: NFTLabsIGW726D065E
+    DependsOn:
+      - NFTLabsVPCGW5C1D0834
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/publicSubnet1/DefaultRoute
+  NFTLabspublicSubnet2Subnet7FB7642F:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: NFTLabs1887C6F8
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: aws-cdk:subnet-name
+          Value: public
+        - Key: aws-cdk:subnet-type
+          Value: Public
+        - Key: Name
+          Value: NftLabStack/NFTLabs/publicSubnet2
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/publicSubnet2/Subnet
+  NFTLabspublicSubnet2RouteTable79D27FE0:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: NFTLabs1887C6F8
+      Tags:
+        - Key: Name
+          Value: NftLabStack/NFTLabs/publicSubnet2
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/publicSubnet2/RouteTable
+  NFTLabspublicSubnet2RouteTableAssociation889AC028:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: NFTLabspublicSubnet2RouteTable79D27FE0
+      SubnetId:
+        Ref: NFTLabspublicSubnet2Subnet7FB7642F
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/publicSubnet2/RouteTableAssociation
+  NFTLabspublicSubnet2DefaultRoute12D613BF:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: NFTLabspublicSubnet2RouteTable79D27FE0
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: NFTLabsIGW726D065E
+    DependsOn:
+      - NFTLabsVPCGW5C1D0834
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/publicSubnet2/DefaultRoute
+  NFTLabsIGW726D065E:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: NftLabStack/NFTLabs
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/IGW
+  NFTLabsVPCGW5C1D0834:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: NFTLabs1887C6F8
+      InternetGatewayId:
+        Ref: NFTLabsIGW726D065E
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabs/VPCGW
+  NFTLabCloud9:
+    Type: AWS::Cloud9::EnvironmentEC2
+    Properties:
+      InstanceType: t3.small
+      ImageId: ubuntu-18.04-x86_64
+      SubnetId:
+        Ref: NFTLabspublicSubnet1Subnet5CEE8B20
+    Metadata:
+      aws:cdk:path: NftLabStack/NFTLabCloud9
+  IpfsEcsCluster7BFB3A4B:
+    Type: AWS::ECS::Cluster
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsEcsCluster/Resource
+  IpfsKuboTaskTaskRoleCF707A81:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsKuboTask/TaskRole/Resource
+  IpfsKuboTaskTaskRoleDefaultPolicy4D4E4235:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogStream
+              - logs:DescribeLogGroups
+              - logs:DescribeLogStreams
+              - logs:PutLogEvents
+              - ssmmessages:CreateControlChannel
+              - ssmmessages:CreateDataChannel
+              - ssmmessages:OpenControlChannel
+              - ssmmessages:OpenDataChannel
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: IpfsKuboTaskTaskRoleDefaultPolicy4D4E4235
+      Roles:
+        - Ref: IpfsKuboTaskTaskRoleCF707A81
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsKuboTask/TaskRole/DefaultPolicy/Resource
+  IpfsKuboTask4CEEB24D:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Essential: true
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - "/usr/local/bin/ipfs dag stat /ipfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn || exit 1 "
+            Interval: 30
+            Retries: 3
+            Timeout: 5
+          Image: ipfs/kubo
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Ref: IpfsKuboTaskIpfsKuboNodeLogGroup6265B67E
+              awslogs-stream-prefix: IpfsKuboNode
+              awslogs-region:
+                Ref: AWS::Region
+          Name: IpfsKuboNode
+          PortMappings:
+            - ContainerPort: 4001
+              Protocol: tcp
+            - ContainerPort: 5001
+              Protocol: tcp
+      Cpu: "1024"
+      ExecutionRoleArn:
+        Fn::GetAtt:
+          - IpfsKuboTaskExecutionRole42BEF4CC
+          - Arn
+      Family: NftLabStackIpfsKuboTask34067DA9
+      Memory: "2048"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      RuntimePlatform:
+        OperatingSystemFamily: LINUX
+      TaskRoleArn:
+        Fn::GetAtt:
+          - IpfsKuboTaskTaskRoleCF707A81
+          - Arn
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsKuboTask/Resource
+  IpfsKuboTaskIpfsKuboNodeLogGroup6265B67E:
+    Type: AWS::Logs::LogGroup
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsKuboTask/IpfsKuboNode/LogGroup/Resource
+  IpfsKuboTaskExecutionRole42BEF4CC:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsKuboTask/ExecutionRole/Resource
+  IpfsKuboTaskExecutionRoleDefaultPolicyC6A6B577:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - IpfsKuboTaskIpfsKuboNodeLogGroup6265B67E
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: IpfsKuboTaskExecutionRoleDefaultPolicyC6A6B577
+      Roles:
+        - Ref: IpfsKuboTaskExecutionRole42BEF4CC
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsKuboTask/ExecutionRole/DefaultPolicy/Resource
+  IpfsServiceSecurityGroup2DA3CADF:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow access to IPFS nodes
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: IPFS swarm port open to the Internet
+          FromPort: 4001
+          IpProtocol: tcp
+          ToPort: 4001
+        - CidrIp:
+            Fn::GetAtt:
+              - NFTLabs1887C6F8
+              - CidrBlock
+          Description: IPFS RPC API from internal network only
+          FromPort: 5001
+          IpProtocol: tcp
+          ToPort: 5001
+      VpcId:
+        Ref: NFTLabs1887C6F8
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsServiceSecurityGroup/Resource
+  IpfsServiceSecurityGroupfromNftLabStackAlbIpfsSecurityGroup298804BB5001D43E63CA:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Load balancer to target
+      FromPort: 5001
+      GroupId:
+        Fn::GetAtt:
+          - IpfsServiceSecurityGroup2DA3CADF
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - AlbIpfsSecurityGroupA94E689E
+          - GroupId
+      ToPort: 5001
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsServiceSecurityGroup/from NftLabStackAlbIpfsSecurityGroup298804BB:5001
+  IpfsSrvServiceC24E61F8:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster:
+        Ref: IpfsEcsCluster7BFB3A4B
+      DeploymentConfiguration:
+        MaximumPercent: 100
+        MinimumHealthyPercent: 0
+      EnableECSManagedTags: false
+      EnableExecuteCommand: true
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: IpfsKuboNode
+          ContainerPort: 5001
+          TargetGroupArn:
+            Ref: AlbIPFSRestApiTargetGroupE97F2D55
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - Fn::GetAtt:
+                - IpfsServiceSecurityGroup2DA3CADF
+                - GroupId
+          Subnets:
+            - Ref: NFTLabspublicSubnet1Subnet5CEE8B20
+      TaskDefinition:
+        Ref: IpfsKuboTask4CEEB24D
+    DependsOn:
+      - IpfsKuboAlbIpfsKuboGatewayListenerB7FE771F
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsSrv/Service
+  AlbIpfsSecurityGroupA94E689E:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Inbound/Outbound rules for the ALB in front of IPFS REST API
+      SecurityGroupEgress:
+        - CidrIp:
+            Fn::GetAtt:
+              - NFTLabs1887C6F8
+              - CidrBlock
+          Description: Allow connection out to the IPFS REST API  on port 5001 anywhere in internal network
+          FromPort: 5001
+          IpProtocol: tcp
+          ToPort: 5001
+      SecurityGroupIngress:
+        - CidrIp:
+            Fn::GetAtt:
+              - NFTLabs1887C6F8
+              - CidrBlock
+          Description: Allow connection to the IPFS REST API  on port 5001 anywhere in internal network
+          FromPort: 5001
+          IpProtocol: tcp
+          ToPort: 5001
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 5001
+          FromPort: 5001
+          IpProtocol: tcp
+          ToPort: 5001
+      VpcId:
+        Ref: NFTLabs1887C6F8
+    Metadata:
+      aws:cdk:path: NftLabStack/AlbIpfsSecurityGroup/Resource
+  AlbIpfsSecurityGrouptoNftLabStackIpfsServiceSecurityGroup32E6528350013ED036FA:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Fn::GetAtt:
+          - AlbIpfsSecurityGroupA94E689E
+          - GroupId
+      IpProtocol: tcp
+      Description: Load balancer to target
+      DestinationSecurityGroupId:
+        Fn::GetAtt:
+          - IpfsServiceSecurityGroup2DA3CADF
+          - GroupId
+      FromPort: 5001
+      ToPort: 5001
+    Metadata:
+      aws:cdk:path: NftLabStack/AlbIpfsSecurityGroup/to NftLabStackIpfsServiceSecurityGroup32E65283:5001
+  IpfsKuboAlb69363226:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: "false"
+      Scheme: internal
+      SecurityGroups:
+        - Fn::GetAtt:
+            - AlbIpfsSecurityGroupA94E689E
+            - GroupId
+      Subnets:
+        - Ref: NFTLabspublicSubnet1Subnet5CEE8B20
+        - Ref: NFTLabspublicSubnet2Subnet7FB7642F
+      Type: application
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsKuboAlb/Resource
+  IpfsKuboAlbIpfsKuboGatewayListenerB7FE771F:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn:
+            Ref: AlbIPFSRestApiTargetGroupE97F2D55
+          Type: forward
+      LoadBalancerArn:
+        Ref: IpfsKuboAlb69363226
+      Port: 5001
+      Protocol: HTTP
+    Metadata:
+      aws:cdk:path: NftLabStack/IpfsKuboAlb/IpfsKuboGatewayListener/Resource
+  AlbIPFSRestApiTargetGroupE97F2D55:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckPath: /api/v0/swarm/peers
+      Matcher:
+        HttpCode: 200,400,403,404,405
+      Port: 5001
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: "false"
+      TargetType: ip
+      VpcId:
+        Ref: NFTLabs1887C6F8
+    Metadata:
+      aws:cdk:path: NftLabStack/AlbIPFSRestApiTargetGroup/Resource
+  billingtoken:
+    Type: AWS::ManagedBlockchain::Accessor
+    Properties:
+      AccessorType: BILLING_TOKEN
+    Metadata:
+      aws:cdk:path: NftLabStack/billing_token
+  GoerliNode:
+    Type: AWS::ManagedBlockchain::Node
+    Properties:
+      NetworkId: n-ethereum-goerli
+      NodeConfiguration:
+        AvailabilityZone:
+          Fn::Select:
+            - 0
+            - Fn::GetAZs: ""
+        InstanceType: bc.t3.large
+    Metadata:
+      aws:cdk:path: NftLabStack/GoerliNode
+Outputs:
+  GoerliNodeEndpoint:
+    Description: Endpoint for Managed Blockchain Goerli Node
+    Value:
+      Fn::Join:
+        - ""
+        - - https://
+          - Fn::GetAtt:
+              - GoerliNode
+              - NodeId
+          - .t.ethereum.managedblockchain.
+          - Ref: AWS::Region
+          - .amazonaws.com?billingtoken=
+          - Fn::GetAtt:
+              - billingtoken
+              - BillingToken
+  IPFSRESTAPIEndpoint:
+    Description: Endpoint for IPFS REST API for Add/Delete files
+    Value:
+      Fn::GetAtt:
+        - IpfsKuboAlb69363226
+        - DNSName
+
