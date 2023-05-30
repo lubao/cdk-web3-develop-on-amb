@@ -14,10 +14,13 @@ from constructs import Construct
 # import os
 
 
+
 class NftLabStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+        self._define_parameter()
+        print(self.__dict__)
         # Create A VPC with 3 public subnet
         _vpc = ec2.Vpc(
             self, "NFTLabs",
@@ -37,19 +40,15 @@ class NftLabStack(Stack):
         #     code=codecommit.Code.from_directory('src')
         # )
         
-        # ISSUE: Need a way ot share Cloud9 Environment to other
-        # Otherwise, user cannot view it on the console...
+        # For workshop studio {{.ParticipantRoleArn}} can help
         # Create cloud9 Develope Environment
-        # Cloud9-alpha will create EC2 and not showed on Cloud9 Console.
-        # _cloud9_env = cloud9.CfnEnvironmentEC2(
-        #     self, 'NFTLabCloud9',
-        #     instance_type='t3.large',
-        #     image_id='ubuntu-18.04-x86_64',
-        #     repositories=[cloud9.CfnEnvironmentEC2.RepositoryProperty(
-        #         path_component='/NFTLabs',
-        #         repository_url=_nft_repo.repository_clone_url_http
-        #     )],
-        # )
+        _cloud9_env = cloud9.CfnEnvironmentEC2(
+            self, 'NFTLabCloud9',
+            instance_type='t3.small',
+            image_id='ubuntu-18.04-x86_64',
+            owner_arn=self._parameter_cloud9_owner.value_as_string,
+            subnet_id=_vpc.select_subnets(subnet_type=ec2.SubnetType.PUBLIC).subnet_ids[0],
+        )
         
         
         # Create ECS Cluster for IPFS node
@@ -81,7 +80,7 @@ class NftLabStack(Stack):
             port_mappings=[
                 ecs.PortMapping(container_port=4001),
                 ecs.PortMapping(container_port=5001),
-                ecs.PortMapping(container_port=8080),
+                # ecs.PortMapping(container_port=8080),
             ],
             health_check=ecs.HealthCheck(
                 command=['/usr/local/bin/ipfs dag stat '
@@ -149,19 +148,26 @@ class NftLabStack(Stack):
             description='Allow connection out to the IPFS REST API '
             ' on port 5001 anywhere in internal network'
         )
-        
-        _alb_ipfs_sg.add_egress_rule(
+
+        _alb_ipfs_sg.add_ingress_rule(
             peer=ec2.Peer.ipv4(_vpc.vpc_cidr_block),
-            connection=ec2.Port.tcp(8080),
-            description='Allow connection out to the IPFS Gateway '
-            ' on port 8080 anywhere in internal network'
+            connection=ec2.Port.tcp(5001),
+            description='Allow connection to the IPFS REST API '
+            ' on port 5001 anywhere in internal network'
         )
+        
+        # _alb_ipfs_sg.add_egress_rule(
+        #     peer=ec2.Peer.ipv4(_vpc.vpc_cidr_block),
+        #     connection=ec2.Port.tcp(8080),
+        #     description='Allow connection out to the IPFS Gateway '
+        #     ' on port 8080 anywhere in internal network'
+        # )
 
         # ALB for IPFS
         _alb_ipfs_kubo = elbv2.ApplicationLoadBalancer(
             self, 'IpfsKuboAlb',
             vpc=_vpc,
-            internet_facing=True,
+            internet_facing=False,
             security_group=_alb_ipfs_sg,
             # vpc_subnets=
         )
@@ -183,18 +189,18 @@ class NftLabStack(Stack):
         )
 
         # Target Group for IPFS Gateway
-        _alb_ipfs_kubo_gateway_target_group = elbv2.ApplicationTargetGroup(
-            self, "AlbIPFSGatewayTargetGroup",
-            target_type=elbv2.TargetType.IP,
-            port=8080,
-            protocol=elbv2.ApplicationProtocol.HTTP,
-            health_check=elbv2.HealthCheck(
-                enabled=True,
-                path='/ipfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn',
-                healthy_http_codes='200,301,302,303,304,307,308',
-            ),
-            vpc=_vpc
-        )
+        # _alb_ipfs_kubo_gateway_target_group = elbv2.ApplicationTargetGroup(
+        #     self, "AlbIPFSGatewayTargetGroup",
+        #     target_type=elbv2.TargetType.IP,
+        #     port=8080,
+        #     protocol=elbv2.ApplicationProtocol.HTTP,
+        #     health_check=elbv2.HealthCheck(
+        #         enabled=True,
+        #         path='/ipfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn',
+        #         healthy_http_codes='200,301,302,303,304,307,308',
+        #     ),
+        #     vpc=_vpc
+        # )
 
         # Add target to ALB IPFS REST API Listner
         _alb_ipfs_kubo_restapi_target_group.add_target(
@@ -205,20 +211,20 @@ class NftLabStack(Stack):
         )
 
         # Add target to ALB IPFS Gateway Listner
-        _alb_ipfs_kubo_gateway_target_group.add_target(
-            _ipfs_srv.load_balancer_target(
-                container_name='IpfsKuboNode',
-                container_port=8080
-            )
-        )
+        # _alb_ipfs_kubo_gateway_target_group.add_target(
+        #     _ipfs_srv.load_balancer_target(
+        #         container_name='IpfsKuboNode',
+        #         container_port=8080
+        #     )
+        # )
         
         # ALB Listener for IPFS Kubo Gateway (port 8080)
-        _ipfs_kubo_gateway_listener = _alb_ipfs_kubo.add_listener(
-            'IpfsKuboRestApiListener', 
-            port=80,
-            default_target_groups=[_alb_ipfs_kubo_gateway_target_group],
-            protocol=elbv2.ApplicationProtocol.HTTP,
-        )
+        # _ipfs_kubo_gateway_listener = _alb_ipfs_kubo.add_listener(
+        #     'IpfsKuboRestApiListener', 
+        #     port=80,
+        #     default_target_groups=[_alb_ipfs_kubo_gateway_target_group],
+        #     protocol=elbv2.ApplicationProtocol.HTTP,
+        # )
         
        # ALB Listener for IPFS Kubo RESTAPI (port 5001)
         _ipfs_kubo_gateway_listener = _alb_ipfs_kubo.add_listener(
@@ -253,30 +259,24 @@ class NftLabStack(Stack):
         
         # Output
         cdk.CfnOutput(
-            self, 'GoerliNodeEndpoint',
+            self, 'Goerli Node Endpoint',
             value=f'https://{_goerli_node.attr_node_id}.t.'
             f'ethereum.managedblockchain.{self.region}.amazonaws.com?'
             f'billingtoken={_billing_token.attr_billing_token}',
             description='Endpoint for Managed Blockchain Goerli Node',
         )
         
-        cdk.CfnOutput(
-            self, 'GoerliNodeWSEndpoint',
-            value=f'wss://{_goerli_node.attr_node_id}.wss.t.'
-            f'ethereum.managedblockchain.{self.region}.amazonaws.com?'
-            f'billingtoken={_billing_token.attr_billing_token}',
-            description='Endpoint for Managed Blockchain Goerli Node',
-        )
-        
-        # IPFS Endpoint
-        cdk.CfnOutput(
-            self, 'IPFS Gateway Endpoint',
-            value=f'http://{_alb_ipfs_kubo.load_balancer_dns_name}',
-            description='Endpoint for IPFS Gateway to get file',
-        )
 
         cdk.CfnOutput(
             self, 'IPFS REST API Endpoint',
-            value=f'http://{_alb_ipfs_kubo.load_balancer_dns_name}:5001',
+            value=f'{_alb_ipfs_kubo.load_balancer_dns_name}',
             description='Endpoint for IPFS REST API for Add/Delete files',
         )
+        
+    def _define_parameter(self):
+
+        self._parameter_cloud9_owner = cdk.CfnParameter(
+            self, 'Cloud9Owner',
+            allowed_pattern='^arn:(aws|aws-cn|aws-us-gov|aws-iso|aws-iso-b):(iam|sts)::\d+:(root|(user\/[\w+=/:,.@-]{1,64}|federated-user\/[\w+=/:,.@-]{2,32}|assumed-role\/[\w+=:,.@-]{1,64}\/[\w+=,.@-]{1,64}))$'
+        )
+    
